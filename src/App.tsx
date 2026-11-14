@@ -139,9 +139,10 @@ function loadPersistedState(): AppState {
       localStorage.getItem('impulso_app_state_v3');
     if (!raw) return base;
     const parsed = JSON.parse(raw) as Partial<AppState>;
-    const existingIds = new Set((parsed.ideas || []).map((i) => i.id));
+    const parsedIdeas = Array.isArray(parsed.ideas) ? parsed.ideas : base.ideas;
+    const existingIds = new Set(parsedIdeas.map((i) => i.id));
     const missingDefaults = DEFAULT_IDEAS.filter((d) => !existingIds.has(d.id));
-    const mergedIdeas = [...missingDefaults, ...(parsed.ideas || base.ideas)];
+    const mergedIdeas = [...missingDefaults, ...parsedIdeas];
 
     const rawEvoSubTab = parsed.evo?.activeSubTab as string | undefined;
     const normalizedEvoSubTab =
@@ -159,9 +160,11 @@ function loadPersistedState(): AppState {
       profile: { ...DEFAULT_USER_PROFILE, ...(parsed.profile || {}) },
       accentTheme: parsed.accentTheme || 'terracota',
       ideas: mergedIdeas,
-      rejectedIdeaIds: parsed.rejectedIdeaIds || [],
-      thoughtLogs: parsed.thoughtLogs || [],
-      masteryPleasureLogs: parsed.masteryPleasureLogs || [],
+      queue: Array.isArray(parsed.queue) ? parsed.queue : base.queue,
+      history: Array.isArray(parsed.history) ? parsed.history : base.history,
+      rejectedIdeaIds: Array.isArray(parsed.rejectedIdeaIds) ? parsed.rejectedIdeaIds : [],
+      thoughtLogs: Array.isArray(parsed.thoughtLogs) ? parsed.thoughtLogs : [],
+      masteryPleasureLogs: Array.isArray(parsed.masteryPleasureLogs) ? parsed.masteryPleasureLogs : [],
       filters: { ...base.filters, ...(parsed.filters || {}) },
       timer: {
         ...base.timer,
@@ -178,7 +181,10 @@ function loadPersistedState(): AppState {
         playing: false,
         sleepSecondsLeft: 0,
       },
-      memories: parsed.memories && parsed.memories.length > 0 ? parsed.memories : base.memories,
+      memories:
+        Array.isArray(parsed.memories) && parsed.memories.length > 0
+          ? parsed.memories
+          : base.memories,
     };
   } catch {
     return base;

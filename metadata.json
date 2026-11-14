@@ -1,0 +1,6 @@
+{
+  "name": "Impulso — Produtividade & Ideias",
+  "description": "Plataforma inteligente de produtividade, foco com cronômetro, antídotos para vieses cognitivos, evolução pessoal na pirâmide de Maslow, lembretes independentes, memórias visuais e paisagens sonoras.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -216,7 +216,13 @@ export default function App() {
   const [tabDirection, setTabDirection] = useState<number>(1);
   const [tasksSubTab, setTasksSubTab] = useState<TasksSubTab>('todas');
 
+  const celebrationTimeoutRef = useRef<number | null>(null);
+
   const navigateToTab = useCallback((nextTab: MainTab) => {
+    if (celebrationTimeoutRef.current) {
+      window.clearTimeout(celebrationTimeoutRef.current);
+      celebrationTimeoutRef.current = null;
+    }
     const prevTab = activeTabRef.current;
     if (nextTab === prevTab) return;
     const currentIdx = TAB_ORDER.indexOf(prevTab);
@@ -267,12 +273,14 @@ export default function App() {
     document.documentElement.setAttribute('data-accent', state.accentTheme || 'terracota');
   }, [state.accentTheme]);
 
-  // Cleanup audio engine on unmount
+  // Cleanup audio engine and pending timers on unmount
   useEffect(() => {
     const engine = new AmbientAudioEngine();
     audioEngineRef.current = engine;
     return () => {
       engine.stop();
+      if (matchTimeoutRef.current) window.clearTimeout(matchTimeoutRef.current);
+      if (celebrationTimeoutRef.current) window.clearTimeout(celebrationTimeoutRef.current);
     };
   }, []);
 
@@ -1371,8 +1379,15 @@ export default function App() {
                       prev.evo.dismissedUntil
                     ),
                   }));
-                  navigateToTab('swipe');
+                  if (celebrationTimeoutRef.current) {
+                    window.clearTimeout(celebrationTimeoutRef.current);
+                  }
+                  celebrationTimeoutRef.current = window.setTimeout(() => {
+                    celebrationTimeoutRef.current = null;
+                    navigateToTab('swipe');
+                  }, 1850);
                 }}
+                onFinishCelebration={() => navigateToTab('swipe')}
                 onCreateMemory={() => {
                   setMemoryPrefillTask(activeFocusTarget.title);
                   navigateToTab('memorias');

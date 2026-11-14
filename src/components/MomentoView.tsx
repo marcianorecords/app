@@ -14,8 +14,10 @@ import {
   Plus,
   RefreshCw,
   RotateCcw,
+  Sparkles,
   Star,
   Trash2,
+  Trophy,
   X,
 } from 'lucide-react';
 import { CATEGORY_META, ENERGY_META, PYRAMID_FIXED_PALETTE } from '../data/ideas';
@@ -42,6 +44,7 @@ interface MomentoViewProps {
   onAddSubStep: (text: string) => void;
   onUpdateScratchpad: (text: string) => void;
   onCompleteTaskWithRatings: (mastery: number, pleasure: number) => void;
+  onFinishCelebration?: () => void;
   onCreateMemory: () => void;
   onSelectQueueItemToFocus: (item: QueueItem) => void;
   onToggleQueueItem: (id: string) => void;
@@ -58,6 +61,41 @@ interface MomentoViewProps {
   onOpenMusicPopup: () => void;
 }
 
+const CONFETTI_COLORS = [
+  '#f59e0b',
+  '#10b981',
+  '#f43f5e',
+  '#3b82f6',
+  '#a855f7',
+  '#ec4899',
+  'var(--accent)',
+];
+
+const CONFETTI_PARTICLES = Array.from({ length: 38 }, (_, idx) => {
+  const angle = (idx * 137.5 * Math.PI) / 180;
+  const dist = 90 + ((idx * 37) % 165);
+  const peakX = Math.cos(angle) * dist;
+  const peakY = Math.sin(angle) * dist - 65;
+  const endY = peakY + 135 + ((idx * 29) % 95);
+  const rotate = (idx % 2 === 0 ? 1 : -1) * (220 + ((idx * 53) % 320));
+  const width = idx % 3 === 0 ? 10 : idx % 3 === 1 ? 8 : 12;
+  const height = idx % 3 === 0 ? 10 : idx % 3 === 1 ? 14 : 6;
+  const isCircle = idx % 4 === 0;
+  return {
+    id: idx,
+    peakX,
+    peakY,
+    endY,
+    rotate,
+    width,
+    height,
+    isCircle,
+    color: CONFETTI_COLORS[idx % CONFETTI_COLORS.length],
+    delay: (idx % 6) * 0.028,
+    duration: 1.15 + (idx % 5) * 0.14,
+  };
+});
+
 export const MomentoView: React.FC<MomentoViewProps> = ({
   target,
   matchedQueue,
@@ -72,6 +110,7 @@ export const MomentoView: React.FC<MomentoViewProps> = ({
   onAddSubStep,
   onUpdateScratchpad,
   onCompleteTaskWithRatings,
+  onFinishCelebration,
   onCreateMemory,
   onSelectQueueItemToFocus,
   onToggleQueueItem,
@@ -99,6 +138,9 @@ export const MomentoView: React.FC<MomentoViewProps> = ({
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [mastery, setMastery] = useState(7);
   const [pleasure, setPleasure] = useState(7);
+  const [celebrationData, setCelebrationData] = useState<{ title: string; xp: number } | null>(
+    null
+  );
   const [pureTimerMode, setPureTimerMode] = useState(false);
 
   useEffect(() => {
@@ -792,6 +834,7 @@ export const MomentoView: React.FC<MomentoViewProps> = ({
                 type="button"
                 onClick={() => {
                   setCheckInOpen(false);
+                  setCelebrationData({ title: target.title, xp: target.xp });
                   onCompleteTaskWithRatings(mastery, pleasure);
                 }}
                 className="flex-1 min-h-[44px] py-2.5 rounded-xl accent-bg text-xs font-semibold flex items-center justify-center gap-1.5"
@@ -803,6 +846,141 @@ export const MomentoView: React.FC<MomentoViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Dopamine Completion Celebration & Confetti Overlay */}
+      <AnimatePresence>
+        {celebrationData && (
+          <motion.div
+            key="completion-celebration"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            onClick={() => {
+              setCelebrationData(null);
+              onFinishCelebration?.();
+            }}
+            className="fixed inset-0 z-50 bg-black/55 backdrop-blur-md flex items-center justify-center p-5 overflow-hidden"
+          >
+            {/* Radial Shockwave Pulse */}
+            {!shouldReduceMotion && (
+              <motion.div
+                initial={{ scale: 0.35, opacity: 0.75 }}
+                animate={{ scale: 2.4, opacity: 0 }}
+                transition={{ duration: 0.95, ease: [0.16, 1, 0.3, 1] }}
+                className="pointer-events-none absolute w-48 h-48 rounded-full border-4 border-emerald-400/70"
+              />
+            )}
+
+            {/* Confetti Burst Particles */}
+            {!shouldReduceMotion && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
+              >
+                {CONFETTI_PARTICLES.map((p) => (
+                  <motion.span
+                    key={p.id}
+                    initial={{ x: 0, y: 0, scale: 0.3, opacity: 1, rotate: 0 }}
+                    animate={{
+                      x: [0, p.peakX, p.peakX * 1.12],
+                      y: [0, p.peakY, p.endY],
+                      scale: [0.3, 1.15, 0.75],
+                      opacity: [1, 1, 0],
+                      rotate: [0, p.rotate * 0.65, p.rotate],
+                    }}
+                    transition={{
+                      duration: p.duration,
+                      delay: p.delay,
+                      times: [0, 0.42, 1],
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                    style={{
+                      width: p.width,
+                      height: p.height,
+                      backgroundColor: p.color,
+                      borderRadius: p.isCircle ? '9999px' : '3px',
+                    }}
+                    className="absolute shadow-sm"
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Center Celebration Card */}
+            <motion.div
+              initial={
+                shouldReduceMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, scale: 0.65, y: 26 }
+              }
+              animate={
+                shouldReduceMotion
+                  ? { opacity: 1 }
+                  : { opacity: 1, scale: 1, y: 0 }
+              }
+              exit={
+                shouldReduceMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, scale: 0.92, y: -12 }
+              }
+              transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-sm w-full glass-surface rounded-3xl p-7 text-center space-y-4 shadow-2xl border border-emerald-500/25"
+            >
+              <motion.div
+                initial={shouldReduceMotion ? undefined : { scale: 0, rotate: -25 }}
+                animate={
+                  shouldReduceMotion
+                    ? undefined
+                    : { scale: [0, 1.22, 1], rotate: [-25, 10, 0] }
+                }
+                transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-emerald-400/25 to-amber-400/25 border border-emerald-500/35 flex items-center justify-center text-emerald-500 relative"
+              >
+                <Trophy className="w-8 h-8 text-amber-400 drop-shadow-sm" />
+                <motion.span
+                  animate={
+                    shouldReduceMotion ? undefined : { scale: [1, 1.3, 1], rotate: [0, 15, 0] }
+                  }
+                  transition={{ duration: 0.9, repeat: Infinity }}
+                  className="absolute -top-1 -right-1 text-emerald-500"
+                >
+                  <Sparkles className="w-4 h-4" />
+                </motion.span>
+              </motion.div>
+
+              <div className="space-y-1">
+                <motion.p
+                  initial={shouldReduceMotion ? undefined : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.08 }}
+                  className="font-mono-num text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                >
+                  +{celebrationData.xp} XP Conquistados
+                </motion.p>
+                <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  Tarefa Concluída!
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                  {celebrationData.title}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCelebrationData(null);
+                  onFinishCelebration?.();
+                }}
+                className="w-full min-h-[44px] py-2.5 px-4 rounded-2xl accent-bg text-xs font-semibold hover:opacity-95 active:scale-95 transition"
+              >
+                Escolher Próxima no Swipe
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Modo Apenas Cronômetro (Oculta todos os controles não essenciais + gradiente dinâmico) */}
       <AnimatePresence>
         {pureTimerMode && (
